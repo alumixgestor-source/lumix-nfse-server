@@ -1,4 +1,4 @@
-﻿import express from "express";
+import express from "express";
 import cors from "cors";
 import { createClient } from "@supabase/supabase-js";
 import {
@@ -78,7 +78,7 @@ app.post("/emitir", async (req, res) => {
       serie: "1",
       servico: { cTribNac: empresa.codigo_tributacao_nacional, descricao: servico.descricao },
       valores: { vServ: valores.valorTotal, aliqIss: valores.aliquotaIss },
-      tomador: { documento: { [tomador.tipo]: tomador.documento }, nome: tomador.nome },
+      tomador: { documento: { [tomador.tipo.toUpperCase()]: tomador.documento }, nome: tomador.nome },
     });
 
     console.log("Resultado emissao:", JSON.stringify(resultado));
