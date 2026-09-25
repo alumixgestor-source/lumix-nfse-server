@@ -79,6 +79,17 @@ app.post("/emitir", async (req, res) => {
       servico: { cTribNac: (empresa.codigo_tributacao_nacional || "").replace(/\D/g, "").padStart(6, "0"), descricao: servico.descricao },
       valores: { vServ: valores.valorTotal, aliqIss: valores.aliquotaIss, pTotTribSN: 6.00 },
       tomador: { documento: { [tomador.tipo.toUpperCase()]: tomador.documento }, nome: tomador.nome },
+      obra: {
+        cObra: "000",
+        end: {
+          xLgr: "Rua da Obra",
+          nro: "S/N",
+          xBairro: "Centro",
+          cMun: empresa.codigo_municipio,
+          UF: empresa.estado || "SP",
+          CEP: (empresa.cep || "00000000").replace(/\D/g, "")
+        }
+      },
     });
 
     console.log("Resultado emissao:", JSON.stringify(resultado));
