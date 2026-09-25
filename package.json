@@ -1,0 +1,19 @@
+﻿{
+  "name": "alumix-nfse-server",
+  "version": "1.0.0",
+  "description": "Servidor de emissao de NFS-e do Alumix",
+  "type": "module",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.45.0",
+    "express": "^4.19.2",
+    "open-nfse": "latest",
+    "cors": "^2.8.5"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  }
+}
