@@ -100,7 +100,7 @@ app.post("/emitir", async (req, res) => {
         },
       },
       serie: "1",
-      nDPS: String(proximoNumero),
+      nDPS: proximoNumero,
       servico: { cTribNac: (empresa.codigo_tributacao_nacional || "").replace(/\D/g, "").padStart(6, "0"), cTribMun: "001", descricao: servico.descricao },
       valores: { vServ: valores.valorTotal, pTotTribSN: 6.00 },
       tomador: { documento: { [tomador.tipo.toUpperCase()]: tomador.documento }, nome: tomador.nome },
