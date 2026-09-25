@@ -76,7 +76,7 @@ app.post("/emitir", async (req, res) => {
         },
       },
       serie: "1",
-      servico: { cTribNac: (empresa.codigo_tributacao_nacional || "").replace(/\D/g, "").padStart(6, "0"), descricao: servico.descricao },
+      servico: { cTribNac: (empresa.codigo_tributacao_nacional || "").replace(/\D/g, "").padStart(6, "0"), cTribMun: "001", descricao: servico.descricao },
       valores: { vServ: valores.valorTotal, aliqIss: valores.aliquotaIss, pTotTribSN: 6.00 },
       tomador: { documento: { [tomador.tipo.toUpperCase()]: tomador.documento }, nome: tomador.nome },
       obra: {
