@@ -94,23 +94,6 @@ app.post("/emitir", async (req, res) => {
 
     console.log("Resultado emissao:", JSON.stringify(resultado));
 
-    // Gera o DANFSe (PDF) e salva no Storage
-    let pdfUrl = null;
-    if (resultado.status === "ok") {
-      try {
-        const pdfBytes = await cliente.gerarDanfse(resultado.nfse.chaveAcesso);
-        const pdfPath = company_id + "/danfse_" + resultado.nfse.chaveAcesso + ".pdf";
-        const { error: errUp } = await supabase.storage
-          .from("notas")
-          .upload(pdfPath, pdfBytes, { contentType: "application/pdf", upsert: true });
-        if (!errUp) {
-          const { data: pub } = supabase.storage.from("notas").getPublicUrl(pdfPath);
-          pdfUrl = pub.publicUrl;
-          console.log("DANFSe gerado:", pdfUrl);
-        }
-      } catch(e) { console.error("Erro ao gerar DANFSe:", e); }
-    }
-
     // Salva no banco
     await supabase.from("notas_fiscais").insert({
       company_id, tipo: "nfse",
@@ -120,7 +103,6 @@ app.post("/emitir", async (req, res) => {
       tomador_nome: tomador.nome,
       tomador_documento: tomador.documento,
       descricao_servico: servico.descricao,
-      pdf_url: pdfUrl,
       emitida_em: new Date().toISOString(),
     });
 
@@ -128,7 +110,6 @@ app.post("/emitir", async (req, res) => {
       sucesso: resultado.status === "ok",
       status: resultado.status,
       chaveAcesso: resultado.status === "ok" ? resultado.nfse.chaveAcesso : null,
-      pdfUrl: pdfUrl,
     });
 
   } catch (err) {
@@ -144,4 +125,3 @@ const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log("Servidor NFS-e rodando na porta " + PORT);
 });
-
