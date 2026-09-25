@@ -79,12 +79,24 @@ app.post("/emitir", async (req, res) => {
       .update({ ultimo_numero: proximoNumero, updated_at: new Date().toISOString() })
       .eq("id", contador.id);
 
+    // DpsCounter customizado
+    const dpsCounterCustom = async function() {
+      return String(proximoNumero);
+    };
+
     // Cliente NFS-e
     const cliente = new NfseClient({
       ambiente: amb,
       certificado: { pfx: pfxBytes, password: cert.senha_criptografada },
+      dpsCounter: dpsCounterCustom,
       retryStore: createInMemoryRetryStore(),
     });
+
+    // Monta o objeto de valores (evita gerar tag pAliq no XML quando for 0)
+    const valoresObj = { vServ: valores.valorTotal, pTotTribSN: 6.00 };
+    if (valores.aliquotaIss > 0) {
+      valoresObj.aliqIss = valores.aliquotaIss;
+    }
 
     // Emitir
     const resultado = await cliente.emitir({
@@ -100,9 +112,8 @@ app.post("/emitir", async (req, res) => {
         },
       },
       serie: "1",
-      nDPS: String(proximoNumero),
       servico: { cTribNac: (empresa.codigo_tributacao_nacional || "").replace(/\D/g, "").padStart(6, "0"), cTribMun: "001", descricao: servico.descricao },
-      valores: { vServ: valores.valorTotal, pTotTribSN: 6.00 },
+      valores: valoresObj,
       tomador: { documento: { [tomador.tipo.toUpperCase()]: tomador.documento }, nome: tomador.nome },
       obra: {
         cObra: "000",
@@ -123,10 +134,8 @@ app.post("/emitir", async (req, res) => {
     let pdfUrl = null;
     if (resultado.status === "ok") {
       try {
-        // Busca a NFS-e completa pela chave (resultado.nfse so tem chaveAcesso)
         const nfseCompleta = await cliente.fetchByChave(resultado.nfse.chaveAcesso);
         console.log("NFSE COMPLETA:", JSON.stringify(nfseCompleta, null, 2));
-        // Gera o DANFSe com o objeto completo
         const pdfBytes = await cliente.gerarDanfse(nfseCompleta.nfse);
         const pdfPath = company_id + "/danfse_" + resultado.nfse.chaveAcesso + ".pdf";
         const { error: errUp } = await supabase.storage
@@ -161,7 +170,69 @@ app.post("/emitir", async (req, res) => {
     });
 
   } catch (err) {
-    console.error("Erro:", err);
+    console.error("Erro na emissao:", err);
+    if (err instanceof ReceitaRejectionError) {
+      return res.status(400).json({ sucesso: false, erro: "Rejeitada [" + err.codigo + "]: " + err.descricao });
+    }
+    res.status(500).json({ sucesso: false, erro: err.message });
+  }
+});
+
+// ===== CANCELAR NFS-e =====
+app.post("/cancelar", async (req, res) => {
+  try {
+    const { company_id, chave_acesso, justificativa } = req.body;
+
+    if (!chave_acesso) throw new Error("Chave de acesso obrigatoria");
+
+    const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+
+    const { data: empresa } = await supabase
+      .from("companies").select("*").eq("id", company_id).single();
+    if (!empresa) throw new Error("Empresa nao encontrada");
+
+    const { data: cert } = await supabase
+      .from("certificados").select("*").eq("company_id", company_id)
+      .order("created_at", { ascending: false }).limit(1).single();
+    if (!cert) throw new Error("Certificado nao encontrado");
+
+    // Baixa certificado
+    const { data: signed } = await supabase.storage
+      .from("certificados").createSignedUrl(cert.storage_path, 60);
+    const respCert = await fetch(signed.signedUrl);
+    const arrayBuffer = await respCert.arrayBuffer();
+    const pfxBytes = Buffer.from(arrayBuffer);
+
+    // Cria cliente
+    const amb = Ambiente.ProducaoRestrita;
+    const cliente = new NfseClient({
+      ambiente: amb,
+      certificado: { pfx: pfxBytes, password: cert.senha_criptografada },
+      retryStore: createInMemoryRetryStore(),
+    });
+
+    // Cancela na SEFAZ
+    const resultado = await cliente.cancelar({
+      chaveAcesso: chave_acesso,
+      justificativa: justificativa || "Cancelamento solicitado pelo prestador",
+    });
+
+    console.log("Cancelamento:", JSON.stringify(resultado));
+
+    // Atualiza o banco
+    await supabase.from("notas_fiscais").update({
+      status: "cancelada",
+      erro_mensagem: "Cancelada em " + new Date().toISOString(),
+    }).eq("chave_acesso", chave_acesso).eq("company_id", company_id);
+
+    res.json({
+      sucesso: true,
+      status: resultado.status || "cancelada",
+      protocolo: resultado.protocolo || null,
+    });
+
+  } catch (err) {
+    console.error("Erro no cancelamento:", err);
     if (err instanceof ReceitaRejectionError) {
       return res.status(400).json({ sucesso: false, erro: "Rejeitada [" + err.codigo + "]: " + err.descricao });
     }
@@ -173,8 +244,3 @@ const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log("Servidor NFS-e rodando na porta " + PORT);
 });
-
-
-
-
-
