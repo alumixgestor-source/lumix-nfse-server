@@ -4,7 +4,7 @@ import { createClient } from "@supabase/supabase-js";
 import {
   NfseClient,
   Ambiente,
-  // createInMemoryDpsCounter, // removido - usa contador do banco
+  createInMemoryDpsCounter,
   createInMemoryRetryStore,
   OpcaoSimplesNacional,
   RegimeApuracaoSimplesNacional,
@@ -54,36 +54,11 @@ app.post("/emitir", async (req, res) => {
     // Ambiente
     const amb = ambiente === "producao" ? Ambiente.Producao : Ambiente.ProducaoRestrita;
 
-    // Contador persistente no banco
-    let { data: contador } = await supabase
-      .from("nfse_contador")
-      .select("*")
-      .eq("company_id", company_id)
-      .eq("serie", "1")
-      .single();
-
-    if (!contador) {
-      const { data: novo } = await supabase
-        .from("nfse_contador")
-        .insert({ company_id, serie: "1", ultimo_numero: 0 })
-        .select()
-        .single();
-      contador = novo;
-    }
-
-    const proximoNumero = (contador?.ultimo_numero || 0) + 1;
-    console.log("Proximo numero DPS:", proximoNumero);
-
-    // Atualiza o contador antes de emitir
-    await supabase
-      .from("nfse_contador")
-      .update({ ultimo_numero: proximoNumero, updated_at: new Date().toISOString() })
-      .eq("id", contador.id);
-
     // Cliente NFS-e
     const cliente = new NfseClient({
       ambiente: amb,
       certificado: { pfx: pfxBytes, password: cert.senha_criptografada },
+      dpsCounter: createInMemoryDpsCounter(),
       retryStore: createInMemoryRetryStore(),
     });
 
@@ -169,5 +144,4 @@ const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log("Servidor NFS-e rodando na porta " + PORT);
 });
-
 
