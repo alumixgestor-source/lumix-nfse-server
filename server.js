@@ -77,7 +77,7 @@ app.post("/emitir", async (req, res) => {
       },
       serie: "1",
       servico: { cTribNac: empresa.codigo_tributacao_nacional, descricao: servico.descricao },
-      valores: { vServ: valores.valorTotal, aliqIss: valores.aliquotaIss },
+      valores: { vServ: valores.valorTotal, aliqIss: valores.aliquotaIss, pTotTribSN: 6.00 },
       tomador: { documento: { [tomador.tipo.toUpperCase()]: tomador.documento }, nome: tomador.nome },
     });
 
