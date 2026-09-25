@@ -10,7 +10,7 @@ import {
   RegimeApuracaoSimplesNacional,
   RegimeEspecialTributacao,
   ReceitaRejectionError,
-} from "./open-nfse-local/dist/index.js";
+} from "open-nfse";
 
 const app = express();
 app.use(cors());
@@ -76,20 +76,9 @@ app.post("/emitir", async (req, res) => {
         },
       },
       serie: "1",
-      servico: { cTribNac: (empresa.codigo_tributacao_nacional || "").replace(/\D/g, "").padStart(6, "0"), cTribMun: "001", descricao: servico.descricao },
-      valores: { vServ: valores.valorTotal, aliqIss: 0, pTotTribSN: 6.00 },
+      servico: { cTribNac: (empresa.codigo_tributacao_nacional || "").replace(/\D/g, ""), descricao: servico.descricao },
+      valores: { vServ: valores.valorTotal, aliqIss: valores.aliquotaIss, pTotTribSN: 6.00 },
       tomador: { documento: { [tomador.tipo.toUpperCase()]: tomador.documento }, nome: tomador.nome },
-      obra: {
-        cObra: "000",
-        end: {
-          xLgr: "Rua da Obra",
-          nro: "S/N",
-          xBairro: "Centro",
-          cMun: empresa.codigo_municipio,
-          UF: empresa.estado || "SP",
-          CEP: (empresa.cep || "00000000").replace(/\D/g, "")
-        }
-      },
     });
 
     console.log("Resultado emissao:", JSON.stringify(resultado));

@@ -1,0 +1,98 @@
+import { XMLBuilder } from 'fast-xml-parser';
+import { RuleViolationError } from '../errors/validation.js';
+import { DEFAULT_VER_APLIC } from '../version.js';
+import { ATTR_PREFIX } from '../xml/parser.js';
+import { buildEventoPedidoId } from './event-id.js';
+const NFSE_NS = 'http://www.sped.fazenda.gov.br/nfse';
+const DEFAULT_TP_AMB = '2';
+const DEFAULT_AMB_GER = '2'; // SefinNacional
+const VERSAO_EVENTO = '1.01';
+const TIPO_CANCELAMENTO = '101101';
+const TIPO_CANCELAMENTO_SUBSTITUICAO = '105102';
+const xmlBuilder = new XMLBuilder({
+    ignoreAttributes: false,
+    attributeNamePrefix: ATTR_PREFIX,
+    suppressEmptyNode: true,
+    processEntities: true,
+});
+/**
+ * Constrói o XML de pedido de registro do evento de **cancelamento** (101101).
+ * Segue a sequência do `TCInfPedReg` da RTC v1.01 e coloca o detalhe em `<e101101>`.
+ */
+export function buildCancelamentoXml(params, options) {
+    const Id = buildEventoPedidoId({
+        chaveAcesso: params.chaveAcesso,
+        tipoEvento: TIPO_CANCELAMENTO,
+    });
+    const detEvento = {
+        e101101: {
+            xDesc: 'Cancelamento de NFS-e',
+            cMotivo: params.cMotivo,
+            xMotivo: params.xMotivo,
+        },
+    };
+    return renderPedRegEvento(Id, params, detEvento, options);
+}
+/**
+ * Constrói o XML de um pedRegEvento de **cancelamento por substituição** (105102).
+ *
+ * @deprecated O contribuinte **não** registra o evento 105102: ele é gerado
+ * pelo Sistema Nacional NFS-e (autor=MEmis) ao receber a nova DPS com
+ * `infDPS/subst` via `POST /nfse` — use `substituir()`. Este builder permanece
+ * como representação de baixo nível do evento (útil para leitura/inspeção e
+ * testes de XSD), mas enviá-lo como contribuinte é rejeitado (E0845/E0813/E2032).
+ */
+export function buildSubstituicaoXml(params, options) {
+    const Id = buildEventoPedidoId({
+        chaveAcesso: params.chaveOriginal,
+        tipoEvento: TIPO_CANCELAMENTO_SUBSTITUICAO,
+    });
+    const detEvento = {
+        e105102: {
+            xDesc: 'Cancelamento de NFS-e por Substituição',
+            cMotivo: params.cMotivo,
+            ...(params.xMotivo ? { xMotivo: params.xMotivo } : {}),
+            chSubstituta: params.chaveSubstituta,
+        },
+    };
+    return renderPedRegEvento(Id, { ...params, chaveAcesso: params.chaveOriginal }, detEvento, options);
+}
+function renderPedRegEvento(Id, params, detEvento, options) {
+    const autor = 'CNPJ' in params.autor ? { CNPJAutor: params.autor.CNPJ } : { CPFAutor: params.autor.CPF };
+    const verAplic = params.verAplic ?? DEFAULT_VER_APLIC;
+    if (verAplic.length < 1 || verAplic.length > 20) {
+        throw new RuleViolationError(`verAplic deve ter entre 1 e 20 caracteres (atual: ${verAplic.length}) — per TSVerAplic do RTC v1.01`, 'TSVerAplic');
+    }
+    // Sequência do infPedReg per Anexo II SEFIN_ADN v1.00-20251226: nPedRegEvento
+    // foi removido tanto do corpo quanto da composição do Id (era a antiga
+    // RTC v1.01). Manter o elemento ou os 3 dígitos extras no Id causa rejeição.
+    const root = {
+        pedRegEvento: {
+            [`${ATTR_PREFIX}xmlns`]: NFSE_NS,
+            [`${ATTR_PREFIX}versao`]: VERSAO_EVENTO,
+            infPedReg: {
+                [`${ATTR_PREFIX}Id`]: Id,
+                tpAmb: params.tpAmb ?? DEFAULT_TP_AMB,
+                verAplic,
+                dhEvento: formatDateTime(params.dhEvento ?? new Date()),
+                ...autor,
+                chNFSe: params.chaveAcesso,
+                ...detEvento,
+            },
+        },
+    };
+    // ambGer is not part of TCInfPedReg — it lives on TCInfEvento (response side).
+    // We therefore ignore params.ambGer here and keep it only for API symmetry.
+    void params.ambGer;
+    const body = xmlBuilder.build(root);
+    return options?.includeXmlDeclaration === false
+        ? body
+        : `<?xml version="1.0" encoding="UTF-8"?>${body}`;
+}
+function formatDateTime(d) {
+    // Same rule as DPS: YYYY-MM-DDTHH:MM:SS-03:00 (Brasília, no DST).
+    const BR_OFFSET_MIN = -180;
+    const shifted = new Date(d.getTime() + BR_OFFSET_MIN * 60_000);
+    return `${shifted.toISOString().slice(0, 19)}-03:00`;
+}
+//# sourceMappingURL=build-event-xml.js.map

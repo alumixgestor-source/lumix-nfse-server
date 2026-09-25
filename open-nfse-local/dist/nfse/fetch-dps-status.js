@@ -1,0 +1,51 @@
+import { TipoAmbiente } from '../ambiente.js';
+import { NotFoundError } from '../errors/http.js';
+import { InvalidDpsIdError } from '../errors/validation.js';
+/**
+ * Pattern do `infDPS.Id` — `DPS` + 42 dígitos (cLocEmi 7 + tpInsc 1 +
+ * inscFederal 14 + serie 5 + nDPS 15 = 42). Total 45 chars (TSIdDPS).
+ */
+const REGEX_DPS_ID = /^DPS\d{42}$/;
+/**
+ * `GET /dps/{id}` — consulta o SEFIN pela chave de acesso da NFS-e a partir
+ * de um `infDPS.Id`. Uso primário: **reconciliação pós-timeout** — se um
+ * `emitir()` não retornou e você tem o idDps persistido, essa chamada revela
+ * se a Receita chegou a gerar a NFS-e.
+ *
+ * Retorna `DpsStatusResult` (com `chaveAcesso`) quando há NFS-e; lança
+ * `NotFoundError` (HTTP 404) quando não há; lança `InvalidDpsIdParamError`
+ * se o formato do id for inválido.
+ */
+export async function fetchDpsStatus(httpClient, idDps) {
+    if (!REGEX_DPS_ID.test(idDps)) {
+        throw new InvalidDpsIdError(idDps);
+    }
+    const raw = await httpClient.get(`/dps/${idDps}`);
+    return {
+        chaveAcesso: raw.chaveAcesso,
+        idDps: raw.idDps,
+        tipoAmbiente: raw.tipoAmbiente === 1 ? TipoAmbiente.Producao : TipoAmbiente.Homologacao,
+        versaoAplicativo: raw.versaoAplicativo,
+        dataHoraProcessamento: new Date(raw.dataHoraProcessamento),
+    };
+}
+/**
+ * `HEAD /dps/{id}` — verifica existência sem baixar o body. Mais barato que
+ * `fetchDpsStatus` para checks bulk de reconciliação. Retorna `true` se há
+ * NFS-e gerada, `false` se não (404). Propaga outros erros HTTP.
+ */
+export async function existsDpsStatus(httpClient, idDps) {
+    if (!REGEX_DPS_ID.test(idDps)) {
+        throw new InvalidDpsIdError(idDps);
+    }
+    try {
+        await httpClient.head(`/dps/${idDps}`);
+        return true;
+    }
+    catch (err) {
+        if (err instanceof NotFoundError)
+            return false;
+        throw err;
+    }
+}
+//# sourceMappingURL=fetch-dps-status.js.map

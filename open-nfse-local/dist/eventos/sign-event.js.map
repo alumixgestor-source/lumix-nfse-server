@@ -1,0 +1,1 @@
+{"version":3,"file":"sign-event.js","sourceRoot":"","sources":["../../src/eventos/sign-event.ts"],"names":[],"mappings":"AACA,OAAO,EAAE,cAAc,EAAE,MAAM,gBAAgB,CAAC;AAEhD;;;GAGG;AACH,MAAM,UAAU,mBAAmB,CAAC,GAAW,EAAE,WAA0B;IACzE,OAAO,cAAc,CAAC,GAAG,EAAE,WAAW,EAAE;QACtC,eAAe,EAAE,cAAc;QAC/B,iBAAiB,EAAE,WAAW;KAC/B,CAAC,CAAC;AACL,CAAC"}

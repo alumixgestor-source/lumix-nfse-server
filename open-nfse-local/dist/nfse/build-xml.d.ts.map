@@ -1,0 +1,1 @@
+{"version":3,"file":"build-xml.d.ts","sourceRoot":"","sources":["../../src/nfse/build-xml.ts"],"names":[],"mappings":"AAGA,OAAO,KAAK,EAMV,GAAG,EAmDJ,MAAM,aAAa,CAAC;AAKrB,MAAM,WAAW,kBAAkB;IACjC,2DAA2D;IAC3D,QAAQ,CAAC,qBAAqB,CAAC,EAAE,OAAO,CAAC;CAC1C;AASD;;;GAGG;AACH,wBAAgB,WAAW,CAAC,GAAG,EAAE,GAAG,EAAE,OAAO,CAAC,EAAE,kBAAkB,GAAG,MAAM,CAc1E"}
