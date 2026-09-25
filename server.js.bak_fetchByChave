@@ -123,11 +123,8 @@ app.post("/emitir", async (req, res) => {
     let pdfUrl = null;
     if (resultado.status === "ok") {
       try {
-        // Busca a NFS-e completa pela chave (resultado.nfse so tem chaveAcesso)
-        const nfseCompleta = await cliente.fetchByChave(resultado.nfse.chaveAcesso);
-        console.log("NFSE COMPLETA:", JSON.stringify(nfseCompleta, null, 2));
-        // Gera o DANFSe com o objeto completo
-        const pdfBytes = await cliente.gerarDanfse(nfseCompleta.nfse);
+        console.log("RESULTADO COMPLETO:", JSON.stringify(resultado, null, 2));
+        const pdfBytes = await cliente.gerarDanfse(resultado.nfse);
         const pdfPath = company_id + "/danfse_" + resultado.nfse.chaveAcesso + ".pdf";
         const { error: errUp } = await supabase.storage
           .from("notas")
@@ -173,7 +170,6 @@ const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log("Servidor NFS-e rodando na porta " + PORT);
 });
-
 
 
 
