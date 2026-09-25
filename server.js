@@ -123,7 +123,7 @@ app.post("/emitir", async (req, res) => {
     let pdfUrl = null;
     if (resultado.status === "ok") {
       try {
-        console.log("OBJETO NFSE:", JSON.stringify(resultado.nfse, null, 2));
+        console.log("RESULTADO COMPLETO:", JSON.stringify(resultado, null, 2));
         const pdfBytes = await cliente.gerarDanfse(resultado.nfse);
         const pdfPath = company_id + "/danfse_" + resultado.nfse.chaveAcesso + ".pdf";
         const { error: errUp } = await supabase.storage
@@ -170,6 +170,7 @@ const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log("Servidor NFS-e rodando na porta " + PORT);
 });
+
 
 
 
