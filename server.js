@@ -4,7 +4,6 @@ import { createClient } from "@supabase/supabase-js";
 import {
   NfseClient,
   Ambiente,
-  // createInMemoryDpsCounter, // removido - usa contador do banco
   createInMemoryRetryStore,
   OpcaoSimplesNacional,
   RegimeApuracaoSimplesNacional,
@@ -101,8 +100,9 @@ app.post("/emitir", async (req, res) => {
         },
       },
       serie: "1",
+      nDPS: proximoNumero,
       servico: { cTribNac: (empresa.codigo_tributacao_nacional || "").replace(/\D/g, "").padStart(6, "0"), cTribMun: "001", descricao: servico.descricao },
-      valores: { vServ: valores.valorTotal, aliqIss: 0, pTotTribSN: 6.00 },
+      valores: { vServ: valores.valorTotal, pTotTribSN: 6.00 },
       tomador: { documento: { [tomador.tipo.toUpperCase()]: tomador.documento }, nome: tomador.nome },
       obra: {
         cObra: "000",
@@ -169,5 +169,3 @@ const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log("Servidor NFS-e rodando na porta " + PORT);
 });
-
-
